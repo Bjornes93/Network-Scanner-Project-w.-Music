@@ -1,0 +1,214 @@
+#!/usr/bin/env python3
+"""
+Network Scanner Project w. Music
+Students: Björn
+Date: 251021
+
+"""
+# Importing modules
+import pygame                                                                                                                                                               #importerar modulen pygame, som är en multimedia/spel-modul
+pygame.init()                                                                                                                                                               #initierar pygame
+import socket                                                                                                                                                               #importerar modul som ger tillgång till nätverkskortets inställningar
+import sys                                                                                                                                                                  #importerar modul som ger tillgång till datorns systeminställningar 
+import os                                                                                                                                                                   #importerar modul som ger tillhång till operativsystem-funktioner       
+from tqdm import tqdm                                                                                                                                                       #importerar modul som visar terminalens process
+from colorama import init, Fore
+
+# Music 
+musicfolder = os.path.join(os.path.dirname(__file__), "musicfolder")                                                                                                        #lokaliserar mappen med musik
+songs = [file for file in os.listdir(musicfolder) if file.endswith(".mp3")]                                                                                                 #skapar en lista av alla låtar i mappen
+#path = os.path.join(musicfolder)                                                                                                                                           #vet ej vad denna gör eller om den är nödvändig*        
+for file in os.listdir(musicfolder):                                                                                                                                        #för varje fil i musicfolder...
+    if file.endswith(".mp3"):                                                                                                                                               #om filen slutar med ".mp3":
+        path = os.path.join(musicfolder, file)                                                                                                                              #lägg in den i sökvägen
+        break                                                                                                                                                               #avsluta 
+
+def banner():                                                                                                                                                               #skapar banner
+    font = """
+!    $$\      $$\           $$\   $$\     $$\       $$$$$$$\                       $$\     
+!    $$$\    $$$ |          $$ |  $$ |    \__|      $$  __$$\                      $$ |    
+!    $$$$\  $$$$ |$$\   $$\ $$ |$$$$$$\   $$\       $$ |  $$ | $$$$$$\   $$$$$$\ $$$$$$\   
+!    $$\$$\$$ $$ |$$ |  $$ |$$ |\_$$  _|  $$ |      $$$$$$$  |$$  __$$\ $$  __$$ \_$$  _|  
+!    $$ \$$$  $$ |$$ |  $$ |$$ |  $$ |    $$ |      $$  ____/ $$ /  $$ |$$ |  \__| $$ |    
+!    $$ |\$  /$$ |$$ |  $$ |$$ |  $$ |$$\ $$ |      $$ |      $$ |  $$ |$$ |       $$ |$$\ 
+!    $$ | \_/ $$ |\$$$$$$  |$$ |  \$$$$  |$$ |      $$ |      \$$$$$$  |$$ |       \$$$$  |
+!    \__|     \__| \______/ \__|   \____/ \__|      \__|       \______/ \__|        \____/ 
+!     $$$$$$\                                                                              
+!    $$  __$$\                                                                                      
+!    $$ /  \__| $$$$$$$\ $$$$$$\  $$$$$$$\  $$$$$$$\   $$$$$$\   $$$$$$\                   
+!    \$$$$$$\  $$  _____|\____$$\ $$  __$$\ $$  __$$\ $$  __$$\ $$  __$$\                                          
+!     \____$$\ $$ /      $$$$$$$ |$$ |  $$ |$$ |  $$ |$$$$$$$$ |$$ |  \__|                 
+!    $$\   $$ |$$ |     $$  __$$ |$$ |  $$ |$$ |  $$ |$$   ____|$$ |                       
+!    \$$$$$$  |\$$$$$$$ \$$$$$$$ |$$ |  $$ |$$ |  $$ |\$$$$$$$\ $$ |                       
+!     \______/  \_______|\_______|\__|  \__|\__|  \__| \_______|\__|                        
+
+"""
+                                                                                  
+    print(font)                                                                                                                                                                                                              #importerar färgmodul för terminalen
+
+# Init colors
+init()                                                                                                                                                                     #initierar colorama
+GREEN = Fore.GREEN                                                                                                                                                         #definierar grön
+MAGENTA =Fore.MAGENTA                                                                                                                                                      #definierar magenta
+BLUE = Fore.BLUE                                                                                                                                                           #definierar blå                
+RESET = Fore.RESET                                                                                                                                                         #definierar funktionen att återställa till urprungsfärg
+
+# Global list to save ports
+open_ports = []                                                                                                                                                            #skapar listan open_ports, där de öppna portarna kommer lagras
+
+# Set range ports, including the max port                                       
+def start_multiscan(target, start_port, max_port, timeout=1.0):                                                                                                            #funktionen som skannar en IP-ett omfång av portar, och sätter en timeout på 1s 
+    
+    # Create a mood/song selection
+    song_choice = (int(input("What's your hacking state of mind? Pick one 1-5:\n1. Wholesome\n2. Chill\n3. Lost\n4. Interstellar\n5. Cut the crap I need to hack\n")))     #ber användaren välja ett mood som den befinner sig i och skapar variabeln song_choice utifrån det
+    index = song_choice - 1                                                                                                                                                #skapar variabeln index av song_choice som gör samma sak, men som ändrar att låtarna ligger på knappval 1-5 istället för 0-4                                                 
+    
+    if 0 <= index < len(songs):                                                                                                                                            #om 0 är mindre eller lika mycket med index och mindre än listan med låtar:
+        song_path = os.path.join(musicfolder, songs[index])                                                                                                                #välj låten baserat på inmatningen från användaren 
+        pygame.mixer.music.load(song_path)                                                                                                                                 #välj låten
+        pygame.mixer.music.play()                                                                                                                                          #spela låten
+    
+    else:                                                                                                                                                                  #annars:      
+        print("You didn't pick a mood. Hacking in silence and contemplation")                                                                                              #skriv ut att inget mood valdes och att hackingen påvörjas i tystnad och kontemplation
+    # Calculation for progress bar
+    total_ports = max_port - start_port + 1                                                                                                                                #skapar variabel som anger alla portar, plus ett 
+    with tqdm(total=total_ports, desc=f"{BLUE}Scanning {target} from [{start_port}] to [{max_port}]", unit="port") as progress_bar:                                        #skapar en process bar av skanningsprocessen
+
+        # Set range ports, including the max port                               
+        for port in range(start_port, max_port + 1):                                                                                                                       #för varje port i omfånget 
+            #AF_INET = IPv4, SOCK_STREAM = constant, create a TCP socket
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)                                                                                                          #använd TCP och IPv4
+            # Try to connect port with time out
+            try:                                                                                                                                                           #försök ansluta inom tidsramen (timout)
+                s.settimeout(timeout)                                                                                                                                      #sätt timouten
+                # Returns to 0 if a port is open
+                result = s.connect_ex((target, port))                                                                                                                      #om porten är öppen, returnera värdet 0
+                # If a port is open, add the open port to the open_ports list
+                if result == 0:                                                                                                                                            #om värdet 0 returneras
+                    # Try to identify the port service
+                    try:                                                                                                                                                   #försök identifiera porten
+                        # For HTTP-ports
+                        if port in (80, 8080):                                                                                                                             #om porten är 80 eller 8080
+                             # Sends an HTTP HEAD request to the connected server, asking for only HTTP headers without a body
+                            s.sendall(b"HEAD / HTTP/1.0\r\nHost: %b\r\n\r\n" % target.encode())                                                                            #skickar en HEAD-förfrågan och kollar om porten svarar som en webtjänst
+                        # Read max 1024 bytes from the opened socket
+                        data = s.recv(1024)                                                                                                                                #mängden data som vi maximalt tar emot: 1024 bytes                          
+                        # Convert the data and do split and strip empty spaces, and get the first part
+                        banner = data.decode(errors="ignore").splitlines()[0].strip()                                                                                       #konverterar datan till text och gör den mer läsbar
+                        
+                        # If the banner exists                                                          
+                        if banner:                                                                                                                                          #om vi får svar från porten
+                            # Add open port to the open_ports list                                      
+                            open_ports.append(f"Port {port} : Banner {banner}")                                                                                             #lägg till porten och bannern i listan över öppna portar
+                            progress_bar.write(f"\nBanner for {target}:{port} -> {banner}")                                                                                 #skriv ut bannern via process-baren
+                            
+
+                        else:                                                                                                                                               #annars
+                            open_ports.append(f"Port {port} : No banner received")                                                                                          #lägg in porten i listan och kommentera att vi ingen banner togs emot
+                            progress_bar.write(f"\nNo banner received for {target}:{port}")                                                                                 #skriv ut felmeddelandet via progress-baren
+
+                    # Socket timed out error                                                            
+                    except socket.timeout:                                                                                                                                  #om det blir timeout
+                        open_ports.append(f"Port {port} : No banner (timeout)")                                                                                             #lägg till porten i listan och kommentera att det blev timout
+                        progress_bar.write(f"\nNo banner (timeout) for {target}:{port}")                                                                                    #skriv ut felmeddelandet via progress-baren
+                    # Catch other errors
+                    except Exception as e:                                                                                                                                  #om det blir problem med att läsa in bannern
+                        open_ports.append(f"Port {port} : Error reading banner {e}")                                                                                        #lägg till porten i listan och kommentera att det blev blev inläsningsproblem
+                        progress_bar.write(f"\nError reading banner for {target}:{port}: {e}")                                                                              #skriv ut felmeddelandet via progress-baren
+            # DNS lookup failed error
+            except socket.gaierror as e:                                                                                                                                    #om det blir problem med inläsningen av IP-adressen eller domänen             
+                progress_bar.write(f"\nHostname could not be resolved. {e}")                                                                                                #skriv ut felmeddelandet via progress-baren och att det inte kunde ordnas
+                return open_ports                                                                                                                                           #avsluta och returnera listan
+            # Socket error              
+            except socket.error as e:                                                                                                                                       #om det inte går att ansluta till servern
+                progress_bar.write(f"\nCould not connect to server. {e}")                                                                                                   #skriv ut felmeddelandet via progress-baren
+                return open_ports                                                                                                                                           #avsluta och returnera listan 
+            # Close socket
+            finally:                                                                                                                                                        #slutligen
+                s.close()                                                                                                                                                   #stänger socket-modulen
+                progress_bar.update(1)                                                                                                                                      #uppdaterar progress-baren
+                
+        # Save port to file
+        save_ports_to_file(target, open_ports)                                                                                                                              #skapar funktionen att spara ner den valda IP-adressen eller domänen och listan över öppna portar till en fil
+
+# Save the ports to file, default file name port_results.txt
+def save_ports_to_file(target, port_list, file_name="port_results.txt"):                                                                                                    #använder funktionen och sparar ner filen
+
+    # Saves only open ports
+    if port_list:                                                                                                                                                           #om det finns en lista
+        print(f"{GREEN}\nSave ports to file: ")                                                                                                                             #meddelar att portarna sparas (i grönt)
+        # Print open port(s)        
+        for port in port_list:                                                                                                                                              #för varje port i listan
+            print(port)                                                                                                                                                     #skriv ut porten
+        
+        # Try to save to file
+        try:                                                                                                                                                                #försök
+            with open(file_name, "w") as f:                                                                                                                                 #öppna filen för att den ska kunna skapas eller skrivas över
+                f.write(f"Open ports for target IP {target}\n")                                                                                                             #skriv ut alla öppna portar från den valda IP-adressen eller domänen
+                # Separate each line with \n at the end
+                for port in port_list:                                                                                                                                      #för varje port i listan
+                    f.write(f"{port}\n")                                                                                                                                    #skriv ut porten på en egen rad
+                # Print out the result of the saved file 
+                print(f"{MAGENTA}The results have been saved to the file: {file_name}")                                                                                     #meddela resultatet som skrivits ut i filen
+
+        # File not found error                                                                         
+        except FileNotFoundError:                                                                                                                                           #tar upp fel om filen inte hittas eller kan öppnas, vid sådant fel:
+            print("File not found.")                                                                                                                                        #skriv då felmeddelandet
+        # Writing to file errors
+        except IOError:                                                                                                                                                     #letar andra generella in och utdatafel, vid sådant fel:
+            print("An I/O error occurred.")                                                                                                                                 #skriv felmeddelandet
+        # Other errors
+        except:                                                                                                                                                             #andra, ej specifika fel
+            print("Something went wrong...")                                                                                                                                #skriv att något gick fel
+        # Close file
+        f.close()                                                                                                                                                           #stäng
+    else:
+        print("\nNo ports are open.")
+
+# Run the program
+if __name__ == "__main__":                                                                                                                                                  #kör programmet
+    banner()
+    # Set default timeout to 1s
+    timeout = 1                                                                                                                                                             #sätter timout på 1s
+
+    # Optional CLI arguments, i.e multi_port_scanner.py scanme.nmap.org 1 30 2
+    # len(sys.argv) checks are optional CLI arguments.
+    # Assume an argument format of <domain name or IP>, <start_port>, <end_port>, <timeout>
+    if len(sys.argv) == 5:                                                                                                                                                  #om användaren skrivit fem kommandon:
+        target = socket.gethostbyname(sys.argv[1])                                                                                                                          #läser in den valda IP-adressen eller domänen    
+        start_port = int(sys.argv[2])                                                                                                                                       #omvandlar start-porten till ett heltal
+        max_port = int(sys.argv[3])                                                                                                                                         #omvandlar max-porten till ett heltal
+        timeout = float(sys.argv[4])                                                                                                                                        #omvandlar timouten till ett decimaltal
+
+    # Optional CLI arguments, i.e multi_port_scanner.py scanme.nmap.org 1 30
+    # len(sys.argv) checks are optional CLI arguments.
+    # Assume an argument format of <domain name or IP>, <start_port>, <end_port>.
+    elif len(sys.argv) == 4:                                                                                                                                                #om användaren skrivit in fyra kommandon:                                                            
+        target = socket.gethostbyname(sys.argv[1])                                                                                                                          #läser in den valda IP-adressen eller domänen  
+        start_port = int(sys.argv[2])                                                                                                                                       #omvandlar start-porten till ett heltal
+        max_port = int(sys.argv[3])                                                                                                                                         #omvandlar max-porten till ett heltal
+        
+    # I.e multi_port_scanner.py scanme.nmap.org
+    # With only 2 arguments, it will ask the user to input <start_port> and <end_port>.
+    elif len(sys.argv) == 2:                                                                                                                                                #om användaren skrivit in två kommandon:
+    # Translate hostname to IPv4. It will also accept just the IP.
+        target = socket.gethostbyname(sys.argv[1])                                                                                                                          #läser in den valda IP-adressen eller domänen
+        start_port = int(input('starting port: '))                                                                                                                          #omvandlar start-porten till ett heltal
+        max_port = int(input('ending port: '))                                                                                                                              #omvandlar max-porten till ett heltal
+
+    # Else inputs from console
+    # As last resort, it will ask the user to input IP or domain.
+    else: # It will convert <domain name> to IPv4, before asking for <start_port> and <end_port>.                                                                           #om användaren inte skrivit in rätt antal argument
+        domain_name = str(input(BLUE + 'Enter target IP or domain: '))                                                                                                      #be användaren mata in IP-adress eller domännamn
+        # Spit url and get the domain name
+        if "http" in domain_name:                                                                                                                                           #om domännamnet innehåller "http":
+            target = domain_name.split("://")                                                                                                                               #tar bort "://"
+            domain_name = target[1]                                                                                                                                         #gör domännamnet till målet för skanning
+
+        target = socket.gethostbyname(domain_name)                                                                                                                          #skannar domännamnet
+        start_port = int(input(BLUE + 'Starting port: '))                                                                                                                   #ber användaren mata in start-port
+        max_port = int(input(BLUE + 'Ending port: '))                                                                                                                       #ber användaren mata in slutport
+        timeout = float(input(BLUE + "Set timout for each port: "))                                                                                                         #ber användaren mata in timout
+        
+    # Scan the give url with start and end ports
+    start_multiscan(target, start_port, max_port, timeout)                                                                                                                  #startar programmet 
